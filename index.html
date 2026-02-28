@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Weekly Timesheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="dna-icon.png">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --fg: #000000;
+      --border: #cccccc;
+      --accent: #0078d4;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --fg: #f5f5f5;
+        --border: #444444;
+        --accent: #3b82f6;
+      }
+    }
+
+    body.dark {
+      --bg: #121212;
+      --fg: #f5f5f5;
+      --border: #444444;
+      --accent: #3b82f6;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 20px auto;
+      background: var(--bg);
+      color: var(--fg);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: center;
+    }
+
+    button {
+      margin: 10px 5px;
+      padding: 10px 15px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    select, input[type="text"], input[type="time"] {
+      padding: 6px;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    #weekStartDisplay {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<h2>Weekly Timesheet</h2>
+
+<div class="top-bar">
+  <label>Your name:
+    <input type="text" id="userName" placeholder="Enter your name">
+  </label>
+
+  <button class="toggle-btn" id="themeToggle">Toggle dark mode</button>
+</div>
+
+<div id="weekStartDisplay"></div>
+
+<select id="savedWeeks" onchange="loadSelectedWeek()">
+  <option value="">Load saved week…</option>
+</select>
+
+<table>
+  <thead>
+    <tr>
+      <th>Day</th>
+      <th>Start</th>
+      <th>Finish</th>
+      <th>Location</th>
+      <th>Hours</th>
+    </tr>
+  </thead>
+  <tbody id="timesheet"></tbody>
+</table>
+
+<h3>Total Hours: <span id="totalHours">0</span></h3>
+
+<button onclick="newWeek()">New Week</button>
+button onclick="saveWeek()">Save Week</button>
+<button onclick="emailTimesheet()">Email Timesheet</button>
+
+<script>
+const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+let currentWeekStart = "";
+
+/* -------------------- THEME -------------------- */
+function loadTheme() {
+  const saved = localStorage.getItem("theme");
+  if (saved === "dark") document.body.classList.add("dark");
+}
+document.getElementById("themeToggle").addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+});
+
+/* -------------------- DATE HELPERS -------------------- */
+function formatDisplayDate(iso) {
+  const [year, month, day] = iso.split("-");
+  return `${day}-${month}-${year}`;
+}
+
+function getCurrentMonday() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diff);
+  return monday.toISOString().split("T")[0];
+}
+
+/* -------------------- TABLE -------------------- */
+function loadTable() {
+  const tbody = document.getElementById("timesheet");
+  tbody.innerHTML = "";
+
+  days.forEach(day => {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${day}</td>
+      <td><input type="time" id="${day}-start"></td>
+      <td><input type="time" id="${day}-finish"></td>
+      <td><input type="text" id="${day}-location" placeholder="Location"></td>
+      <td id="${day}-hours">0</td>
+    `;
+
+    tbody.appendChild(row);
+
+    row.querySelector(`#${day}-start`).addEventListener("change", calculateHours);
+    row.querySelector(`#${day}-finish`).addEventListener("change", calculateHours);
+  });
+}
+
+function calculateHours() {
+  let total = 0;
+
+  days.forEach(day => {
+    const start = document.getElementById(`${day}-start`).value;
+    const finish = document.getElementById(`${day}-finish`).value;
+
+    if (start && finish) {
+      const startDate = new Date(`2000-01-01T${start}`);
+      const finishDate = new Date(`2000-01-01T${finish}`);
+      const diff = (finishDate - startDate) / 1000 / 3600;
+
+      const hours = diff > 0 ? diff : 0;
+      document.getElementById(`${day}-hours`).innerText = hours.toFixed(2);
+      total += hours;
+    }
+  });
+
+  document.getElementById("totalHours").innerText = total.toFixed(2);
+}
+
+function clearWeek() {
+  days.forEach(day => {
+    document.getElementById(`${day}-start`).value = "";
+    document.getElementById(`${day}-finish`).value = "";
+    document.getElementById(`${day}-location`).value = "";
+    document.getElementById(`${day}-hours`).innerText = "0";
+  });
+  document.getElementById("totalHours").innerText = "0";
+}
+
+/* -------------------- NAME -------------------- */
+function loadUserName() {
+  const savedName = localStorage.getItem("userName") || "";
+  document.getElementById("userName").value = savedName;
+}
+document.getElementById("userName").addEventListener("input", () => {
+  localStorage.setItem("userName", document.getElementById("userName").value);
+});
+
+/* -------------------- WEEK STORAGE -------------------- */
+function saveWeek() {
+  const data = {
+    name: document.getElementById("userName").value,
+    days: {},
+    total: document.getElementById("totalHours").innerText
+  };
+
+  days.forEach(day => {
+    data.days[day] = {
+      start: document.getElementById(`${day}-start`).value,
+      finish: document.getElementById(`${day}-finish`).value,
+      location: document.getElementById(`${day}-location`).value,
+      hours: document.getElementById(`${day}-hours`).innerText
+    };
+  });
+
+  localStorage.setItem(`week_${currentWeekStart}`, JSON.stringify(data));
+  loadSavedWeeks();
+  alert("Week saved.");
+}
+
+function loadSavedWeeks() {
+  const select = document.getElementById("savedWeeks");
+  select.innerHTML = `<option value="">Load saved week…</option>`;
+
+  Object.keys(localStorage)
+    .filter(k => k.startsWith("week_"))
+    .sort()
+    .forEach(key => {
+      const week = key.replace("week_", "");
+      const opt = document.createElement("option");
+      opt.value = week;
+      opt.textContent = formatDisplayDate(week);
+      select.appendChild(opt);
+    });
+}
+
+function loadSelectedWeek() {
+  const week = document.getElementById("savedWeeks").value;
+  if (!week) return;
+
+  const data = JSON.parse(localStorage.getItem(`week_${week}`));
+  currentWeekStart = week;
+
+  document.getElementById("userName").value = data.name;
+  document.getElementById("totalHours").innerText = data.total;
+  document.getElementById("weekStartDisplay").innerText = `Week starting: ${formatDisplayDate(week)}`;
+
+  days.forEach(day => {
+    const d = data.days[day];
+    document.getElementById(`${day}-start`).value = d.start;
+    document.getElementById(`${day}-finish`).value = d.finish;
+    document.getElementById(`${day}-location`).value = d.location;
+    document.getElementById(`${day}-hours`).innerText = d.hours;
+  });
+}
+
+/* -------------------- NEW WEEK -------------------- */
+function newWeek() {
+  currentWeekStart = getCurrentMonday();
+  clearWeek();
+  document.getElementById("weekStartDisplay").innerText =
+    `Week starting: ${formatDisplayDate(currentWeekStart)}`;
+}
+
+/* -------------------- EMAIL -------------------- */
+function emailTimesheet() {
+  let body = `Timesheet for week starting ${formatDisplayDate(currentWeekStart)}%0D%0A%0D%0A`;
+  body += `Name: ${document.getElementById("userName").value}%0D%0A%0D%0A`;
+
+  days.forEach(day => {
+    const start = document.getElementById(`${day}-start`).value;
+    const finish = document.getElementById(`${day}-finish`).value;
+    const location = document.getElementById(`${day}-location`).value;
+    const hours = document.getElementById(`${day}-hours`).innerText;
+
+    body += `${day}: ${start} - ${finish}, ${location}, ${hours} hours%0D%0A`;
+  });
+
+  body += `%0D%0ATotal Hours: ${document.getElementById("totalHours").innerText}`;
+
+  window.location.href = `mailto:?subject=Weekly Timesheet&body=${body}`;
+}
+
+/* -------------------- INIT -------------------- */
+loadTheme();
+loadTable();
+loadUserName();
+loadSavedWeeks();
+newWeek();
+
+/* -------------------- SERVICE WORKER -------------------- */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
