@@ -1,286 +1,746 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Weekly Timesheet</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="dna-icon.png">
-  <meta name="theme-color" content="#121212">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
+  <!-- Basic styling -->
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #ffffff;
-      --fg: #000000;
-      --border: #cccccc;
-      --accent: #0078d4;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+      --accent: #0057b8;
+      --accent-soft: #e0ecff;
+      --text-main: #222222;
+      --text-muted: #666666;
+      --border: #dddddd;
+      --danger: #c0392b;
+      --disabled-bg: #f0f0f0;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #121212;
-        --fg: #f5f5f5;
-        --border: #444444;
-        --accent: #3b82f6;
-      }
-    }
-
-    body.dark {
-      --bg: #121212;
-      --fg: #f5f5f5;
-      --border: #444444;
-      --accent: #3b82f6;
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     body {
-      font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 20px auto;
+      margin: 0;
+      padding: 0;
       background: var(--bg);
-      color: var(--fg);
-      transition: background 0.2s, color 0.2s;
+      color: var(--text-main);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
     }
 
-    th, td {
-      border: 1px solid var(--border);
-      padding: 8px;
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 8px 0;
       text-align: center;
     }
 
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .week-nav-group {
+      display: flex;
+      gap: 8px;
+    }
+
     button {
-      margin: 10px 5px;
-      padding: 10px 15px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
       background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
+      color: #ffffff;
+      padding: 6px 10px;
+      font-size: 0.9rem;
       cursor: pointer;
+      min-width: 80px;
     }
 
-    button:hover {
-      opacity: 0.9;
+    button.secondary {
+      background: #ffffff;
+      color: var(--accent);
     }
 
-    select, input[type="text"], input[type="time"] {
-      padding: 6px;
-      background: var(--bg);
-      color: var(--fg);
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .week-label {
+      flex: 1;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .week-status {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .week-status span.tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
       border: 1px solid var(--border);
-      border-radius: 4px;
+      background: #ffffff;
+      margin-left: 4px;
     }
 
-    #weekStartDisplay {
-      font-weight: bold;
-      margin-top: 10px;
+    .week-status span.tag.editable {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
     }
 
-    .top-bar {
+    .week-status span.tag.locked {
+      border-color: var(--border);
+      color: var(--text-muted);
+      background: var(--disabled-bg);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 12px;
+    }
+
+    .day-row {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+    }
+
+    .day-row:last-child {
+      border-bottom: none;
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .day-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .day-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .inputs-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    input[type="time"],
+    input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      background: #ffffff;
+    }
+
+    input[disabled] {
+      background: var(--disabled-bg);
+      color: var(--text-muted);
+    }
+
+    .location-wrapper {
+      margin-bottom: 4px;
+    }
+
+    .hours-display {
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .hours-display span.value {
+      font-weight: 600;
+      color: var(--text-main);
+      margin-left: 4px;
+    }
+
+    .summary-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
-      gap: 10px;
-      flex-wrap: wrap;
+      font-size: 0.9rem;
     }
 
-    .toggle-btn {
-      background: transparent;
-      color: var(--fg);
-      border: 1px solid var(--border);
+    .summary-row strong {
+      font-size: 1rem;
+    }
+
+    .summary-row .total-hours {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .actions-left {
+      display: flex;
+      gap: 8px;
+    }
+
+    .info-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .locked-note {
+      font-size: 0.8rem;
+      color: var(--danger);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .inputs-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .week-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .week-nav-group {
+        justify-content: space-between;
+      }
+
+      button {
+        flex: 1;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .actions-left {
+        width: 100%;
+      }
+
+      .actions-left button {
+        flex: 1;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="app">
+    <h1>Weekly Timesheet</h1>
+    <div class="subtitle">Weeks run Monday to Sunday. Current and previous weeks are editable.</div>
 
-<h2>Weekly Timesheet</h2>
+    <div class="week-header">
+      <div class="week-nav-group">
+        <button id="prevWeekBtn" class="secondary">&laquo; Previous</button>
+      </div>
+      <div class="week-label" id="weekLabel"></div>
+      <div class="week-nav-group" style="justify-content: flex-end;">
+        <button id="nextWeekBtn" class="secondary">Next &raquo;</button>
+      </div>
+    </div>
 
-<div class="top-bar">
-  <label>Your name:
-    <input type="text" id="userName" placeholder="Enter your name">
-  </label>
+    <div class="week-status" id="weekStatus"></div>
 
-  <button class="toggle-btn" id="themeToggle">Toggle dark mode</button>
-</div>
+    <div class="card" id="daysContainer"></div>
 
-<div id="weekStartDisplay"></div>
+    <div class="card">
+      <div class="summary-row">
+        <div><strong>Total hours this week:</strong></div>
+        <div class="total-hours" id="totalHours">0.00</div>
+      </div>
+      <div class="info-text">
+        Daily hours are only counted when <strong>Start</strong>, <strong>Finish</strong>, and <strong>Location</strong> are all filled.
+      </div>
+      <div class="locked-note" id="lockedNote" style="display:none;">
+        This week is locked. You can view it but not edit it.
+      </div>
+      <div class="actions">
+        <div class="actions-left">
+          <button id="emailBtn">Email Timesheet</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<select id="savedWeeks" onchange="loadSelectedWeek()">
-  <option value="">Load saved week…</option>
-</select>
-
-<table>
-  <thead>
-    <tr>
-      <th>Day</th>
-      <th>Start</th>
-      <th>Finish</th>
-      <th>Location</th>
-      <th>Hours</th>
-    </tr>
-  </thead>
-  <tbody id="timesheet"></tbody>
-</table>
-
-<h3>Total Hours: <span id="totalHours">0</span></h3>
-
-<button onclick="newWeek()">New Week</button>
-<button onclick="emailTimesheet()">Email Timesheet</button>
-
-<script>
-const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-let currentWeekStart = "";
-
-function loadTheme() {
-  const saved = localStorage.getItem("theme");
-  if (saved === "dark") document.body.classList.add("dark");
-}
-document.getElementById("themeToggle").addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
-});
-
-function formatDisplayDate(iso) {
-  const [year, month, day] = iso.split("-");
-  return `${day}-${month}-${year}`;
-}
-
-function getCurrentMonday() {
-  const today = new Date();
-  const day = today.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + diff);
-  return monday.toISOString().split("T")[0];
-}
-
-function loadTable() {
-  const tbody = document.getElementById("timesheet");
-  tbody.innerHTML = "";
-
-  days.forEach(day => {
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${day}</td>
-      <td><input type="time" id="${day}-start" value="08:00"></td>
-      <td><input type="time" id="${day}-finish" value="16:00"></td>
-      <td><input type="text" id="${day}-location" placeholder="Location"></td>
-      <td id="${day}-hours">0</td>
-    `;
-
-    tbody.appendChild(row);
-
-    row.querySelector(`#${day}-start`).addEventListener("change", calculateHours);
-    row.querySelector(`#${day}-finish`).addEventListener("change", calculateHours);
-  });
-
-  calculateHours();
-}
-
-function calculateHours() {
-  let total = 0;
-
-  days.forEach(day => {
-    const start = document.getElementById(`${day}-start`).value;
-    const finish = document.getElementById(`${day}-finish`).value;
-
-    if (start && finish) {
-      const startDate = new Date(`2000-01-01T${start}`);
-      const finishDate = new Date(`2000-01-01T${finish}`);
-      const diff = (finishDate - startDate) / 1000 / 3600;
-
-      const hours = diff > 0 ? diff : 0;
-      document.getElementById(`${day}-hours`).innerText = hours.toFixed(2);
-      total += hours;
+  <script>
+    // --- Date helpers ---
+    function getMonday(date) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const day = d.getDay(); // 0 (Sun) - 6 (Sat)
+      const diff = (day === 0 ? -6 : 1 - day); // shift so Monday is start
+      d.setDate(d.getDate() + diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
     }
-  });
 
-  document.getElementById("totalHours").innerText = total.toFixed(2);
-}
+    function addDays(date, days) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + days);
+      return d;
+    }
 
-function clearWeek() {
-  days.forEach(day => {
-    document.getElementById(`${day}-start`).value = "08:00";
-    document.getElementById(`${day}-finish`).value = "16:00";
-    document.getElementById(`${day}-location`).value = "";
-    document.getElementById(`${day}-hours`).innerText = "0";
-  });
-  calculateHours();
-}
+    function formatDateUK(date) {
+      const d = date.getDate().toString().padStart(2, "0");
+      const m = (date.getMonth() + 1).toString().padStart(2, "0");
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    }
 
-function loadUserName() {
-  const savedName = localStorage.getItem("userName") || "";
-  document.getElementById("userName").value = savedName;
-}
-document.getElementById("userName").addEventListener("input", () => {
-  localStorage.setItem("userName", document.getElementById("userName").value);
-});
+    function formatDateISO(date) {
+      const y = date.getFullYear();
+      const m = (date.getMonth() + 1).toString().padStart(2, "0");
+      const d = date.getDate().toString().padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
 
-function loadSelectedWeek() {
-  const week = document.getElementById("savedWeeks").value;
-  if (!week) return;
+    function weekKeyFromMonday(mondayDate) {
+      return `week-${formatDateISO(mondayDate)}`;
+    }
 
-  const data = JSON.parse(localStorage.getItem(`week_${week}`));
-  currentWeekStart = week;
+    function getCurrentWeekMonday() {
+      return getMonday(new Date());
+    }
 
-  document.getElementById("userName").value = data.name;
-  document.getElementById("totalHours").innerText = data.total;
-  document.getElementById("weekStartDisplay").innerText = `Week starting: ${formatDisplayDate(week)}`;
+    function getPreviousWeekMonday(currentMonday) {
+      return addDays(currentMonday, -7);
+    }
 
-  days.forEach(day => {
-    const d = data.days[day];
-    document.getElementById(`${day}-start`).value = d.start;
-    document.getElementById(`${day}-finish`).value = d.finish;
-    document.getElementById(`${day}-location`).value = d.location;
-    document.getElementById(`${day}-hours`).innerText = d.hours;
-  });
-}
+    function areSameDay(d1, d2) {
+      return d1.getFullYear() === d2.getFullYear() &&
+             d1.getMonth() === d2.getMonth() &&
+             d1.getDate() === d2.getDate();
+    }
 
-function newWeek() {
-  currentWeekStart = getCurrentMonday();
-  clearWeek();
-  document.getElementById("weekStartDisplay").innerText =
-    `Week starting: ${formatDisplayDate(currentWeekStart)}`;
-}
+    // --- State ---
+    const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function emailTimesheet() {
-  let body = `Timesheet for week starting ${formatDisplayDate(currentWeekStart)}%0D%0A%0D%0A`;
-  body += `Name: ${document.getElementById("userName").value}%0D%0A%0D%0A`;
+    let currentWeekMonday = getCurrentWeekMonday(); // Monday of "current" week (today's week)
+    let viewedWeekMonday = new Date(currentWeekMonday); // Monday of week being displayed
 
-  days.forEach(day => {
-    const start = document.getElementById(`${day}-start`).value;
-    const finish = document.getElementById(`${day}-finish`).value;
-    const location = document.getElementById(`${day}-location`).value;
-    const hours = document.getElementById(`${day}-hours`).innerText;
+    // --- DOM refs ---
+    const weekLabelEl = document.getElementById("weekLabel");
+    const weekStatusEl = document.getElementById("weekStatus");
+    const daysContainerEl = document.getElementById("daysContainer");
+    const totalHoursEl = document.getElementById("totalHours");
+    const lockedNoteEl = document.getElementById("lockedNote");
+    const prevWeekBtn = document.getElementById("prevWeekBtn");
+    const nextWeekBtn = document.getElementById("nextWeekBtn");
+    const emailBtn = document.getElementById("emailBtn");
 
-    body += `${day}: ${start} - ${finish}, ${location}, ${hours} hours%0D%0A`;
-  });
+    // --- Local storage helpers ---
+    function loadWeekFromStorage(mondayDate) {
+      const key = weekKeyFromMonday(mondayDate);
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
 
-  body += `%0D%0ATotal Hours: ${document.getElementById("totalHours").innerText}`;
+    function saveWeekToStorage(mondayDate, data) {
+      const key = weekKeyFromMonday(mondayDate);
+      localStorage.setItem(key, JSON.stringify(data));
+    }
 
-  window.location.href = `mailto:?subject=Weekly Timesheet&body=${body}`;
-}
+    // --- Week type helpers ---
+    function getWeekType(mondayDate) {
+      const currentMon = getCurrentWeekMonday();
+      const prevMon = getPreviousWeekMonday(currentMon);
 
-loadTheme();
-loadTable();
-loadUserName();
-loadSelectedWeek();
-newWeek();
+      if (areSameDay(mondayDate, currentMon)) return "current";
+      if (areSameDay(mondayDate, prevMon)) return "previous";
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
-</script>
+      // older or future
+      return "other";
+    }
 
+    function isWeekEditable(mondayDate, savedWeek) {
+      // If saved and marked locked, it's locked regardless of age
+      if (savedWeek && savedWeek.locked) return false;
+
+      const type = getWeekType(mondayDate);
+      return type === "current" || type === "previous";
+    }
+
+    // --- Rendering ---
+    function renderWeek() {
+      daysContainerEl.innerHTML = "";
+      totalHoursEl.textContent = "0.00";
+      lockedNoteEl.style.display = "none";
+
+      const weekStart = new Date(viewedWeekMonday);
+      const weekEnd = addDays(weekStart, 6);
+
+      // Week label
+      weekLabelEl.textContent = `${formatDateUK(weekStart)} – ${formatDateUK(weekEnd)}`;
+
+      // Load saved data if any
+      const savedWeek = loadWeekFromStorage(weekStart);
+      const editable = isWeekEditable(weekStart, savedWeek);
+
+      // Week status text
+      const type = getWeekType(weekStart);
+      let statusText = "";
+      let tagText = "";
+      let tagClass = "";
+
+      if (savedWeek && savedWeek.locked) {
+        statusText = "This week has been emailed and saved.";
+        tagText = "Locked (saved)";
+        tagClass = "locked";
+      } else if (type === "current") {
+        statusText = "This is the current week (Monday to Sunday).";
+        tagText = "Current (editable)";
+        tagClass = "editable";
+      } else if (type === "previous") {
+        statusText = "This is the previous week (still editable).";
+        tagText = "Previous (editable)";
+        tagClass = "editable";
+      } else if (weekStart < getPreviousWeekMonday(getCurrentWeekMonday())) {
+        statusText = "This is an older week and is locked.";
+        tagText = "Locked";
+        tagClass = "locked";
+      } else {
+        statusText = "This is a future week and is locked.";
+        tagText = "Locked";
+        tagClass = "locked";
+      }
+
+      weekStatusEl.innerHTML = `${statusText} <span class="tag ${tagClass}">${tagText}</span>`;
+
+      if (!editable) {
+        lockedNoteEl.style.display = "block";
+      }
+
+      // Build day rows
+      let totalHours = 0;
+
+      for (let i = 0; i < 7; i++) {
+        const dayDate = addDays(weekStart, i);
+        const dayName = dayNames[i];
+        const dayKey = formatDateISO(dayDate);
+
+        const dayRow = document.createElement("div");
+        dayRow.className = "day-row";
+        dayRow.dataset.date = dayKey;
+
+        const header = document.createElement("div");
+        header.className = "day-header";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "day-name";
+        nameEl.textContent = dayName;
+
+        const dateEl = document.createElement("div");
+        dateEl.className = "day-date";
+        dateEl.textContent = formatDateUK(dayDate);
+
+        header.appendChild(nameEl);
+        header.appendChild(dateEl);
+
+        const inputsRow = document.createElement("div");
+        inputsRow.className = "inputs-row";
+
+        const startWrapper = document.createElement("div");
+        const startLabel = document.createElement("label");
+        startLabel.textContent = "Start";
+        const startInput = document.createElement("input");
+        startInput.type = "time";
+        startInput.className = "start-time";
+        startInput.value = "08:00";
+
+        startWrapper.appendChild(startLabel);
+        startWrapper.appendChild(startInput);
+
+        const finishWrapper = document.createElement("div");
+        const finishLabel = document.createElement("label");
+        finishLabel.textContent = "Finish";
+        const finishInput = document.createElement("input");
+        finishInput.type = "time";
+        finishInput.className = "finish-time";
+        finishInput.value = "16:00";
+
+        finishWrapper.appendChild(finishLabel);
+        finishWrapper.appendChild(finishInput);
+
+        inputsRow.appendChild(startWrapper);
+        inputsRow.appendChild(finishWrapper);
+
+        const locationWrapper = document.createElement("div");
+        locationWrapper.className = "location-wrapper";
+        const locationLabel = document.createElement("label");
+        locationLabel.textContent = "Location";
+        const locationInput = document.createElement("input");
+        locationInput.type = "text";
+        locationInput.className = "location-input";
+        locationInput.placeholder = "Enter site location";
+
+        locationWrapper.appendChild(locationLabel);
+        locationWrapper.appendChild(locationInput);
+
+        const hoursDisplay = document.createElement("div");
+        hoursDisplay.className = "hours-display";
+        hoursDisplay.innerHTML = `Hours:<span class="value">–</span>`;
+
+        dayRow.appendChild(header);
+        dayRow.appendChild(inputsRow);
+        dayRow.appendChild(locationWrapper);
+        dayRow.appendChild(hoursDisplay);
+
+        daysContainerEl.appendChild(dayRow);
+
+        // If saved data exists, apply it
+        if (savedWeek && savedWeek.days && savedWeek.days[dayKey]) {
+          const saved = savedWeek.days[dayKey];
+          if (saved.start) startInput.value = saved.start;
+          if (saved.finish) finishInput.value = saved.finish;
+          if (saved.location) locationInput.value = saved.location;
+          if (typeof saved.hours === "number") {
+            hoursDisplay.querySelector(".value").textContent = saved.hours.toFixed(2);
+            totalHours += saved.hours;
+          } else {
+            hoursDisplay.querySelector(".value").textContent = "–";
+          }
+        } else {
+          // No saved data: default times, empty location, no hours
+          hoursDisplay.querySelector(".value").textContent = "–";
+        }
+
+        // Attach listeners only if editable
+        if (editable) {
+          const recalc = () => {
+            recalculateDayAndTotal(dayRow);
+          };
+          startInput.addEventListener("change", recalc);
+          finishInput.addEventListener("change", recalc);
+          locationInput.addEventListener("input", recalc);
+        } else {
+          startInput.disabled = true;
+          finishInput.disabled = true;
+          locationInput.disabled = true;
+        }
+      }
+
+      // If we loaded saved data, totalHours may already be set
+      if (savedWeek && typeof savedWeek.totalHours === "number") {
+        totalHoursEl.textContent = savedWeek.totalHours.toFixed(2);
+      } else {
+        // Recalculate from visible rows (in case of unsaved editable week)
+        recalculateTotal();
+      }
+
+      // Navigation buttons: always allow both directions
+      prevWeekBtn.disabled = false;
+      nextWeekBtn.disabled = false;
+    }
+
+    // --- Calculation ---
+    function parseTimeToMinutes(timeStr) {
+      if (!timeStr) return null;
+      const [h, m] = timeStr.split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+    function recalculateDayAndTotal(dayRow) {
+      const startInput = dayRow.querySelector(".start-time");
+      const finishInput = dayRow.querySelector(".finish-time");
+      const locationInput = dayRow.querySelector(".location-input");
+      const hoursValueEl = dayRow.querySelector(".hours-display .value");
+
+      const start = startInput.value;
+      const finish = finishInput.value;
+      const location = locationInput.value.trim();
+
+      if (!start || !finish || !location) {
+        hoursValueEl.textContent = "–";
+        recalculateTotal();
+        return;
+      }
+
+      const startMin = parseTimeToMinutes(start);
+      const finishMin = parseTimeToMinutes(finish);
+
+      if (startMin === null || finishMin === null || finishMin <= startMin) {
+        hoursValueEl.textContent = "–";
+        recalculateTotal();
+        return;
+      }
+
+      const diffHours = (finishMin - startMin) / 60;
+      hoursValueEl.textContent = diffHours.toFixed(2);
+
+      recalculateTotal();
+    }
+
+    function recalculateTotal() {
+      let total = 0;
+      const dayRows = daysContainerEl.querySelectorAll(".day-row");
+      dayRows.forEach(row => {
+        const valEl = row.querySelector(".hours-display .value");
+        const text = valEl.textContent;
+        const num = parseFloat(text);
+        if (!isNaN(num)) {
+          total += num;
+        }
+      });
+      totalHoursEl.textContent = total.toFixed(2);
+    }
+
+    // --- Email + Save ---
+    function buildWeekDataForSave() {
+      const weekStart = new Date(viewedWeekMonday);
+      const daysData = {};
+      const dayRows = daysContainerEl.querySelectorAll(".day-row");
+
+      dayRows.forEach(row => {
+        const dateKey = row.dataset.date;
+        const start = row.querySelector(".start-time").value || "";
+        const finish = row.querySelector(".finish-time").value || "";
+        const location = row.querySelector(".location-input").value || "";
+        const hoursText = row.querySelector(".hours-display .value").textContent;
+        const hours = parseFloat(hoursText);
+        daysData[dateKey] = {
+          start,
+          finish,
+          location,
+          hours: isNaN(hours) ? null : hours
+        };
+      });
+
+      const total = parseFloat(totalHoursEl.textContent) || 0;
+
+      return {
+        mondayISO: formatDateISO(weekStart),
+        totalHours: total,
+        days: daysData,
+        locked: true
+      };
+    }
+
+    function buildEmailBody() {
+      const weekStart = new Date(viewedWeekMonday);
+      const weekEnd = addDays(weekStart, 6);
+      const total = totalHoursEl.textContent;
+
+      let body = "";
+      body += `Timesheet for week ${formatDateUK(weekStart)} to ${formatDateUK(weekEnd)}%0D%0A`;
+      body += `%0D%0A`;
+
+      const dayRows = daysContainerEl.querySelectorAll(".day-row");
+      dayRows.forEach(row => {
+        const dateKey = row.dataset.date;
+        const dateParts = dateKey.split("-");
+        const dateObj = new Date(
+          parseInt(dateParts[0], 10),
+          parseInt(dateParts[1], 10) - 1,
+          parseInt(dateParts[2], 10)
+        );
+        const dayName = row.querySelector(".day-name").textContent;
+        const start = row.querySelector(".start-time").value || "";
+        const finish = row.querySelector(".finish-time").value || "";
+        const location = row.querySelector(".location-input").value || "";
+        const hoursText = row.querySelector(".hours-display .value").textContent;
+        const hours = isNaN(parseFloat(hoursText)) ? "" : hoursText;
+
+        body += `${dayName} ${formatDateUK(dateObj)}%0D%0A`;
+        body += `Start: ${start || "-"}  Finish: ${finish || "-"}%0D%0A`;
+        body += `Location: ${location || "-"}%0D%0A`;
+        body += `Hours: ${hours || "-"}%0D%0A`;
+        body += `%0D%0A`;
+      });
+
+      body += `Total hours: ${total}%0D%0A`;
+
+      return body;
+    }
+
+    function sendEmail() {
+      const weekStart = new Date(viewedWeekMonday);
+      const savedWeek = loadWeekFromStorage(weekStart);
+
+      // Save on email (even if locked/older)
+      const dataToSave = buildWeekDataForSave();
+      saveWeekToStorage(weekStart, dataToSave);
+
+      // Re-render to reflect locked state
+      renderWeek();
+
+      const subject = encodeURIComponent(
+        `Timesheet week ${formatDateUK(weekStart)}`
+      );
+      const body = buildEmailBody();
+
+      const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
+      window.location.href = mailtoLink;
+    }
+
+    // --- Navigation handlers ---
+    prevWeekBtn.addEventListener("click", () => {
+      viewedWeekMonday = addDays(viewedWeekMonday, -7);
+      renderWeek();
+    });
+
+    nextWeekBtn.addEventListener("click", () => {
+      viewedWeekMonday = addDays(viewedWeekMonday, 7);
+      renderWeek();
+    });
+
+    emailBtn.addEventListener("click", () => {
+      sendEmail();
+    });
+
+    // --- Initial render ---
+    renderWeek();
+  </script>
 </body>
 </html>
