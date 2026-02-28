@@ -205,5 +205,82 @@ function calculateHours() {
     }
   });
 
-  document.getElementById("
+  document.getElementById("totalHours").innerText = total.toFixed(2);
+}
 
+function clearWeek() {
+  days.forEach(day => {
+    document.getElementById(`${day}-start`).value = "08:00";
+    document.getElementById(`${day}-finish`).value = "16:00";
+    document.getElementById(`${day}-location`).value = "";
+    document.getElementById(`${day}-hours`).innerText = "0";
+  });
+  calculateHours();
+}
+
+function loadUserName() {
+  const savedName = localStorage.getItem("userName") || "";
+  document.getElementById("userName").value = savedName;
+}
+document.getElementById("userName").addEventListener("input", () => {
+  localStorage.setItem("userName", document.getElementById("userName").value);
+});
+
+function loadSelectedWeek() {
+  const week = document.getElementById("savedWeeks").value;
+  if (!week) return;
+
+  const data = JSON.parse(localStorage.getItem(`week_${week}`));
+  currentWeekStart = week;
+
+  document.getElementById("userName").value = data.name;
+  document.getElementById("totalHours").innerText = data.total;
+  document.getElementById("weekStartDisplay").innerText = `Week starting: ${formatDisplayDate(week)}`;
+
+  days.forEach(day => {
+    const d = data.days[day];
+    document.getElementById(`${day}-start`).value = d.start;
+    document.getElementById(`${day}-finish`).value = d.finish;
+    document.getElementById(`${day}-location`).value = d.location;
+    document.getElementById(`${day}-hours`).innerText = d.hours;
+  });
+}
+
+function newWeek() {
+  currentWeekStart = getCurrentMonday();
+  clearWeek();
+  document.getElementById("weekStartDisplay").innerText =
+    `Week starting: ${formatDisplayDate(currentWeekStart)}`;
+}
+
+function emailTimesheet() {
+  let body = `Timesheet for week starting ${formatDisplayDate(currentWeekStart)}%0D%0A%0D%0A`;
+  body += `Name: ${document.getElementById("userName").value}%0D%0A%0D%0A`;
+
+  days.forEach(day => {
+    const start = document.getElementById(`${day}-start`).value;
+    const finish = document.getElementById(`${day}-finish`).value;
+    const location = document.getElementById(`${day}-location`).value;
+    const hours = document.getElementById(`${day}-hours`).innerText;
+
+    body += `${day}: ${start} - ${finish}, ${location}, ${hours} hours%0D%0A`;
+  });
+
+  body += `%0D%0ATotal Hours: ${document.getElementById("totalHours").innerText}`;
+
+  window.location.href = `mailto:?subject=Weekly Timesheet&body=${body}`;
+}
+
+loadTheme();
+loadTable();
+loadUserName();
+loadSelectedWeek();
+newWeek();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
