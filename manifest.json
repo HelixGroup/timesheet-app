@@ -1,0 +1,15 @@
+{
+  "name": "Timesheet",
+  "short_name": "Timesheet",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "helix-120.png", "sizes": "120x120", "type": "image/png" },
+    { "src": "helix-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "helix-167.png", "sizes": "167x167", "type": "image/png" },
+    { "src": "helix-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "helix-1024.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}
